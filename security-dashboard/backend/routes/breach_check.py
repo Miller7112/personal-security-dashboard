@@ -52,4 +52,3 @@ def check_password_breach(password):
 
 password = input("Enter password to check: ")
 check_password_breach(password)
-22
