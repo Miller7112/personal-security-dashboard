@@ -1,54 +1,29 @@
-"""
-import hashlib:  Used for hashing the password
-import requests: Used for making API requests
+from flask import Blueprint, request, jsonify
+from backend.utils.api_calls import check_pwned_password  # Function to check breach status
 
-Check if a password has been leaked using HIBP's free API.
+# Create the blueprint for breach check
+breach_check_bp = Blueprint('breach_check', __name__)
 
-Process:
-Using sha1 hashing algorithm: 
-- Takes input and generates 40-character hexadecimal hash
-- Prefix: First 5 characters is sent to HIBP API to check breach
-- Suffix: Remaining 35 characters are stored locally
+@breach_check_bp.route('/check_breach', methods=['POST'])
+def check_breach():
+    # Get the password from the request body
+    data = request.json
+    password = data.get("password", "")
 
-K-Anonymity:
-- By hashing, the actual password is hidden, providing privacy while 
-still allowing checks against leaks.
+    if not password:
+        return jsonify({"error": "No password provided"}), 400
 
-Returns:
-- A message indicating whether the password has been found in breaches or is safe.
-"""
+    # Check the breach status
+    breach_count = check_pwned_password(password)
 
-import hashlib
-import requests
+    response = {
+        "password": password,
+        "breach_count": breach_count,
+        "safe": breach_count == 0,
+        "message": (
+            "✅ Password is safe (not found in breaches)." if breach_count == 0
+            else f"⚠️ Your password was found in {breach_count} breaches! Consider changing it immediately."
+        )
+    }
 
-def check_password_breach(password):
-    sha1_password = hashlib.sha1(password.encode()).hexdigest().upper()
-    prefix, suffix = sha1_password[:5], sha1_password[5:]
-
-    url = f"https://api.pwnedpasswords.com/range/{prefix}"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        hashes = response.text.splitlines()
-        found = False
-        # print(f"Checking password: {password}\n")
-        # print(f"SHA-1 Hash: {sha1_password}")
-        # print(f"Searching for prefix: {prefix}\n")
-        # print("Leaked Passwords with the Same Prefix:\n")
-        
-        for line in hashes:
-            leaked_suffix, count = line.split(":")
-
-            if leaked_suffix == suffix:
-                found = True
-                print(f"Your password was found in {count} breaches!")
-                # print(f"   Raw Data: {prefix}{leaked_suffix}:{count}")
-                print("Consider changing it immediately!\n")
-
-        if not found:
-            print("Password is safe (not found in breaches).")
-    else:
-        print("Error: Could not check password.")
-
-password = input("Enter password to check: ")
-check_password_breach(password)
+    return jsonify(response)

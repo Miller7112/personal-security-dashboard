@@ -1,80 +1,43 @@
-# This file is for user authentication signup and login.
-# How it should work user sends username, email, and password.
-# Needs to ask the user for those things.
-# Check if username is taken.
-# If not taken hash the password and save user in database(not setup atm just ref it).
-# Return success message.
+from flask import Blueprint, request, jsonify
 
-import bcrypt
+auth_bp = Blueprint('auth', __name__)
 
-users_db = {}
-
-def hash_password(password):
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode(), salt)
-    return hashed
-
+@auth_bp.route('/signup', methods=['POST'])
 def signup():
-    username = input("Enter a username: ")
-    if username in users_db:
-        print ("Username is taken! Choose a different one. ")
-        return
-
-    email = input("Enter your email: ")
-    password = input("Enter a password: ")
-
-    # Hash the password before saving it
-    hashed_password = hash_password(password)
-
-    # Store user data (simulating database)
-    users_db[username] = {"email": email, "password": hashed_password}
-    print ("Signup successful! You can now login!")
-
-    def verify_password(stored_password, entered_password):
-        return bcrypt.checkpw(entered_password.encode(), stored_password)
-
-def login():
-    username = input("Enter your username: ")
-
-    if username not in users_db:
-        print("User not found! Please sign up first.")
-        return False
-
-    password = input("Enter your password: ")
-
-    if verify_password(users_db[username]["password"], password):
-        print("Login successful! Welcome,", username)
-        return True
-    else:
-        print("Incorrect password! Try again.")
-        return False
-
-current_user = None  # Keeps track of the logged-in user
-
-def dashboard():
-    if current_user:
-        print(f"Welcome to your dashboard, {current_user}!")
-    else:
-        print("Access Denied! Please log in first.")
-
-def main():
-    global current_user  # Allows modification of current_user inside functions
+    # Importing here to avoid circular import
+    from backend.models.user import add_user
     
-    while True:
-        print("\nOptions: 1) Sign Up  2) Login  3) Dashboard  4) Exit")
-        choice = input("Choose an option: ")
+    data = request.get_json()
 
-        if choice == "1":
-            signup()
-        elif choice == "2":
-            if login():
-                current_user = input("Enter your username again to confirm: ")  # Store logged-in user
-        elif choice == "3":
-            dashboard()
-        elif choice == "4":
-            print("Goodbye!")
-            break
-        else:
-            print("Invalid choice! Try again.")
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
+    if not username or not email or not password:
+        return jsonify({"error": "All fields (username, email, password) are required!"}), 400
 
+    # Check if the username is already taken
+    from backend.models.user import users_db  
+    if username in users_db:
+        return jsonify({"error": "Username is taken! Choose a different one."}), 400
+
+    add_user(username, email, password)  # Add the user with the hashed password
+
+    return jsonify({"message": "Signup successful! You can now log in."}), 201
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    # Importing here to avoid circular import
+    from backend.models.user import check_user_credentials
+    
+    data = request.get_json()
+
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"error": "Username and password are required!"}), 400
+
+    if check_user_credentials(username, password):
+        return jsonify({"message": "Login successful!"}), 200
+    return jsonify({"error": "Invalid credentials"}), 401
