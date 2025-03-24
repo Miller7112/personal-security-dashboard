@@ -1,7 +1,7 @@
 from flask import Flask
 from backend.routes.auth import auth_bp
 from backend.routes.password_check import password_check_bp
-from backend.routes.breach_check import breach_check_bp  # Import the new breach check blueprint
+from backend.routes.breach_check import breach_check_bp  
 
 app = Flask(__name__)
 
@@ -10,7 +10,7 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')  # Auth routes (signup, 
 app.register_blueprint(password_check_bp, url_prefix='/api/password')  # Password check routes
 app.register_blueprint(breach_check_bp, url_prefix='/api/breach')  # Breach check routes
 
-# Set up any necessary app configurations
+# Setting up necessary app configurations
 app.config['SECRET_KEY'] = 'your_secret_key'
 
 @app.route('/')

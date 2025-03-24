@@ -27,7 +27,7 @@ def check_password():
         "feedback": feedback,
         "message": (
             "✅ Password is strong and not found in breaches." if breach_count == 0 and strength_score >= 3
-            else f"⚠️ Password is weak or found in {breach_count} breaches! Consider changing it."
+            else f"Password is weak or found in {breach_count} breaches! Consider changing it."
         )
     }
 
